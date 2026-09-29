@@ -1,6 +1,6 @@
 module(name = "orion")
 
-bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.19")
 bazel_dep(name = "rules_python", version = "1.9.0")
@@ -69,7 +69,7 @@ crate.annotation(
     link_deps = ["@llama_cpp_sys_src//:llama-common"],
     patch_args = ["-p1"],
     patches = ["//third_party/llama:lib_rs.patch"],
-    rustc_env = {"LLAMA_BINDINGS_RS": "${pwd}/$(execpath @llama_cpp_sys_src//:llama_bindings)"},
+    rustc_env = {"LLAMA_BINDINGS_RS": "$${pwd}/$(execpath @llama_cpp_sys_src//:llama_bindings)"},
 )
 crate.from_specs(
     name = "crates",
