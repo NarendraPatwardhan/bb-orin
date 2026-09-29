@@ -26,7 +26,7 @@ fn main() -> ExitCode {
         }
         Err(err) => {
             eprintln!("load failed: {err:?}");
-            ExitCode::from(1);
+            ExitCode::from(1)
         }
     }
 }
