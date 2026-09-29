@@ -86,6 +86,11 @@ crate.spec(
     package = "bindgen",
     version = "0.72.1",
 )
+# Same crate llama-cpp-2 0.1.157 uses to decode token pieces.
+crate.spec(
+    package = "encoding_rs",
+    version = "0.8.35",
+)
 crate.annotation(
     compile_data = ["@llama_cpp_sys_src//:llama_bindings"],
     crate = "llama-cpp-sys-2",

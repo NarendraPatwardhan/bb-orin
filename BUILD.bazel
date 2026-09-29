@@ -38,7 +38,11 @@ rust_binary(
         "-Clink-arg=-Wl,--disable-new-dtags",
         "-Clink-arg=-Wl,-rpath,$$ORIGIN",
     ],
-    deps = ["@crates//:llama-cpp-2"],
+    deps = [
+        "@crates//:encoding_rs",
+        "@crates//:llama-cpp-2",
+        "@crates//:llama-cpp-sys-2",
+    ],
 )
 
 # remote_download_minimal returns only this tar, so the two shared objects
