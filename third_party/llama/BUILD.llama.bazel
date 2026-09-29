@@ -9,6 +9,13 @@ _FA_TYPES = ["Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q8_0", "BF16", "F16"]
 _FA_ON = ["Q4_0_Q4_0", "Q8_0_Q8_0", "F16_F16", "BF16_BF16"]
 
 # cmake compiles f16-f16, q4_0-q4_0, q8_0-q8_0, and bf16-bf16, and still emits all 49 FA macros.
+# glibc hides CPU_SET and pthread_*affinity_np unless _GNU_SOURCE is set.
+# ggml's CMake does this for every Linux compile of the tree.
+_GNU_DEFINES = [
+    "_GNU_SOURCE",
+    "_XOPEN_SOURCE=600",
+]
+
 _CUDA_DEFINES = [
     "GGML_CUDA_FA_{}_{}={}".format(k, v, 1 if "{}_{}".format(k, v) in _FA_ON else 0)
     for k in _FA_TYPES
@@ -17,7 +24,7 @@ _CUDA_DEFINES = [
     "GGML_CUDA_FA_QUANTS=\\\"q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16\\\"",
     "GGML_CUDA_NO_VMM",
     "GGML_CUDA_USE_GRAPHS",
-]
+] + _GNU_DEFINES
 
 expand_template(
     name = "ggml_version_h",
@@ -106,6 +113,7 @@ cc_library(
         "-lm",
         "-lpthread",
     ],
+    local_defines = _GNU_DEFINES,
 )
 
 cc_library(
@@ -137,7 +145,7 @@ cc_library(
     local_defines = [
         "GGML_USE_DOTPROD",
         "GGML_USE_FP16_VECTOR_ARITHMETIC",
-    ],
+    ] + _GNU_DEFINES,
     deps = [":ggml-base"],
 )
 
@@ -213,6 +221,7 @@ cc_library(
         "llama.cpp/ggml/src",
     ],
     linkopts = ["-ldl"],
+    local_defines = _GNU_DEFINES,
     deps = [
         ":ggml-base",
         ":ggml-cpu",
@@ -239,6 +248,7 @@ cc_library(
         "llama.cpp/include",
         "llama.cpp/src",
     ],
+    local_defines = _GNU_DEFINES,
     deps = [":ggml"],
 )
 
@@ -271,6 +281,7 @@ cc_library(
         "-lpthread",
         "-lstdc++",
     ],
+    local_defines = _GNU_DEFINES,
     deps = [
         ":cpp-httplib",
         ":llama",
