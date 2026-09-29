@@ -91,7 +91,9 @@ crate.annotation(
     link_deps = ["@llama_cpp_sys_src//:llama-common"],
     patch_args = ["-p1"],
     patches = ["//third_party/llama:lib_rs.patch"],
-    rustc_env = {"LLAMA_BINDINGS_RS": "$${pwd}/$(execpath @llama_cpp_sys_src//:llama_bindings)"},
+    # rules_rust 0.74 prefixes $(execpath) with ${pwd} itself. Adding it
+    # here produced /execroot//execroot/bazel-out/... and include! missed the file.
+    rustc_env = {"LLAMA_BINDINGS_RS": "$(execpath @llama_cpp_sys_src//:llama_bindings)"},
 )
 crate.from_specs(
     name = "crates",
