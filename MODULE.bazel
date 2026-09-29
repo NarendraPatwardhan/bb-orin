@@ -23,7 +23,14 @@ git_override(
 )
 
 register_toolchains("@llvm//toolchain:all")
-register_toolchains("@rules_rust_bindgen//:default_bindgen_toolchain")
+
+# The default bindgen toolchain builds @llvm-project from source. Its genrules
+# need python3, which the ubuntu:22.04 executor does not have.
+llvm_prebuilt = use_repo_rule("//third_party:llvm_prebuilt.bzl", "llvm_prebuilt")
+
+llvm_prebuilt(name = "llvm_prebuilt")
+
+register_toolchains("//third_party/bindgen:bindgen_toolchain")
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 

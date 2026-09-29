@@ -1,0 +1,21 @@
+load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_toolchain")
+
+rust_bindgen_toolchain(
+    name = "bindgen_toolchain_impl",
+    bindgen = "@rules_rust_bindgen//3rdparty:bindgen",
+    # Hermetic clang (the registered cc toolchain) supplies -resource-dir.
+    # libclang itself is the prebuilt in @llvm_prebuilt, not a source build.
+    libclang = "@llvm_prebuilt//:libclang",
+    # Puts that directory on LD_LIBRARY_PATH so libclang's NEEDED libs resolve.
+    libstdcxx = "@llvm_prebuilt//:libclang",
+)
+
+toolchain(
+    name = "bindgen_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    toolchain = ":bindgen_toolchain_impl",
+    toolchain_type = "@rules_rust_bindgen//:toolchain_type",
+)

@@ -134,7 +134,7 @@ If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupporte
 ## Modules
 
 - `rules_rust`, with rustc 1.98 and both `aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-gnu` in `crate.from_cargo`'s `supported_platform_triples`. The x86_64 rustc emits aarch64 objects and links them with the aarch64 clang.
-- `rules_rust_bindgen`, for the FFI action.
+- `rules_rust_bindgen`, for the FFI action. The registered toolchain is `//third_party/bindgen:bindgen_toolchain`. It dlopens a prebuilt libclang 22 (`third_party/llvm_prebuilt.bzl`). The module's default toolchain builds `@llvm-project` from source, and that path calls `python3`, which the ubuntu:22.04 executor image does not have. Hermetic `@llvm` stays the C++ compiler; its prebuilt ships `clang` and not `libclang.so`.
 - `rules_cc`.
 - `llvm`, hermetic clang, the same cross toolchain that already targets aarch64 at the glibc 2.28 floor. Registered with `@llvm//toolchain:all`.
 - `rules_cuda`. `cuda.redist_json` for CUDA 13.2, platforms `linux-x86_64` and `linux-sbsa`. `@rules_cuda//cuda:aarch64` stays `sbsa`.
