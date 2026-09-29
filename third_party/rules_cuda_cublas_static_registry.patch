@@ -1,0 +1,10 @@
+--- a/cuda/private/templates/registry.bzl
++++ b/cuda/private/templates/registry.bzl
+@@ -7,6 +7,6 @@
+     "crt": ["crt_all_files", "crt_license", "crt_headers", "crt"],
+     "culibos": ["culibos_all_files", "culibos_license", "culibos_headers", "culibos_a"],  # culibos_a is not for end users.
+-    "cublas": ["cublas_all_files", "cublas_license", "cublas_headers", "cublas"],
++    "cublas": ["cublas_all_files", "cublas_license", "cublas_headers", "cublas", "cublas_static", "cublasLt_static"],
+     "cufft": ["cufft_all_files", "cufft_license", "cufft_headers", "cufft", "cufft_static"],
+     "cufile": ["cufile", "cufile_all_files", "cufile_header_files", "cufile_headers", "cufile_license"],
+     "cupti": ["cupti_all_files", "cupti_license", "cupti_headers", "cupti", "nvperf_host", "nvperf_target"],

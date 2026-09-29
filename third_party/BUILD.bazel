@@ -1,3 +1,4 @@
 exports_files([
-    "rules_cuda_cublas_static.patch",
+    "rules_cuda_cublas_static_build.patch",
+    "rules_cuda_cublas_static_registry.patch",
 ])

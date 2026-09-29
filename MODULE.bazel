@@ -14,7 +14,10 @@ bazel_dep(name = "rules_cuda", version = "0.3.0")
 git_override(
     module_name = "rules_cuda",
     commit = "8dd68e7ade0c681d46eb659e662e9b4fe1e87013",
-    patches = ["//third_party:rules_cuda_cublas_static.patch"],
+    patches = [
+        "//third_party:rules_cuda_cublas_static_build.patch",
+        "//third_party:rules_cuda_cublas_static_registry.patch",
+    ],
     patch_strip = 1,
     remote = "https://github.com/bazel-contrib/rules_cuda.git",
 )
