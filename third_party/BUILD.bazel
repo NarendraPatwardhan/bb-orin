@@ -1,4 +1,5 @@
 exports_files([
+    "hermetic_llvm_libstdcxx_cxx23.patch",
     "rules_cuda_cublas_static_build.patch",
     "rules_cuda_cublas_static_registry.patch",
     "rules_rust_dynamic_cxx.patch",

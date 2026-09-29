@@ -129,7 +129,9 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --remote_download_minimal
 ```
 
-nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects `@llvm//constraints/cxxstdlib:libstdcxx.17.0.0`. The 13.2 port in this toolchain has an empty c++23 source list and does not analyze. If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. The clang toolchain stays the one selected above.
+nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects libstdc++. GCC 16 and 17 headers use `__builtin_is_virtual_base_of` and a C++26 iota array that nvcc 13.2's parser rejects, so the platform selects `@llvm//constraints/cxxstdlib:libstdcxx.13.4.0`. Hermetic-llvm's c++23 library points at an empty filegroup before GCC 16, which Bazel 8 rejects; `third_party/hermetic_llvm_libstdcxx_cxx23.patch` compiles no c++23 objects for those versions. nvcc's own dialect is `-std=c++17`, and `nvcc_allow_unsupported_compiler` stays on. The clang toolchain stays.
+
+nvcc splits `-D` values on commas. `GGML_CUDA_FA_QUANTS` is a semicolon-separated string so `f16` does not become a macro. The per-type `GGML_CUDA_FA_*` macros still select the four vector kernels.
 
 Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ runtime into every crate except dylibs, and that path is the genrule that exits 1. The override in `third_party/rules_rust_dynamic_cxx.patch` links the shared runtime for target builds. Exec tools such as `process_wrapper` stay on static libc++, because the host's dynamic libc++ does not pull libunwind and the link fails on `_Unwind_Resume`.
 

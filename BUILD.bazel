@@ -8,10 +8,9 @@ platform(
         "@platforms//cpu:aarch64",
         "@platforms//os:linux",
         "@llvm//constraints/libc:gnu.2.28",
-        # nvcc's parser cannot read the hermetic libc++ headers. 13.2's
-        # libstdc++ port has an empty c++23 source list under this toolchain;
-        # 17.0.0 is the version hermetic-llvm actually builds.
-        "@llvm//constraints/cxxstdlib:libstdcxx.17.0.0",
+        # nvcc 13.2 cannot parse GCC 16+ libstdc++. 13.4 is the newest
+        # GCC 13 port, and it does not use those builtins.
+        "@llvm//constraints/cxxstdlib:libstdcxx.13.4.0",
     ],
 )
 

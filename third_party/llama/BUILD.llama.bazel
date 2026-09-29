@@ -21,7 +21,9 @@ _CUDA_DEFINES = [
     for k in _FA_TYPES
     for v in _FA_TYPES
 ] + [
-    "GGML_CUDA_FA_QUANTS=\\\"q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16\\\"",
+    # nvcc splits -D values on commas, which turned f16 into a macro.
+    # The string is only reported as a feature; the FA_* macros select kernels.
+    "GGML_CUDA_FA_QUANTS=\\\"q4_0-q4_0;q8_0-q8_0;f16-f16;bf16-bf16\\\"",
     "GGML_CUDA_NO_VMM",
     "GGML_CUDA_USE_GRAPHS",
 ] + _GNU_DEFINES
@@ -181,6 +183,7 @@ cuda_library(
     alwayslink = True,
     copts = [
         "--allow-unsupported-compiler",
+        "-std=c++17",
         "-use_fast_math",
         "-compress-mode=size",
         "-Xcompiler",

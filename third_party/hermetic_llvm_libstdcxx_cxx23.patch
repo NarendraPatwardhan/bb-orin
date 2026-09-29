@@ -1,0 +1,26 @@
+diff --git a/3rd_party/gcc/gcc.BUILD.bazel b/3rd_party/gcc/gcc.BUILD.bazel
+--- a/3rd_party/gcc/gcc.BUILD.bazel
++++ b/3rd_party/gcc/gcc.BUILD.bazel
+@@ -1627,7 +1627,12 @@
+ 
+ cc_library(
+     name = "libstdcxx_cxx23",
+-    srcs = [":libstdcxx_cxx23_sources"],
++    # Empty before GCC 16. A filegroup that produces no files is rejected
++    # by Bazel 8, so those versions compile no c++23 objects.
++    srcs = [
++        ":libstdcxx_cxx23_std_cc",
++        ":libstdcxx_cxx23_std_compat_cc",
++    ] if gcc_version_at_least_for(GCC_VERSION, "16.0.0") else [],
+     hdrs = LIBSTDCXX_LIBRARY_HDRS,
+     copts = LIBSTDCXX_LIBRARY_COPTS + [
+         "-std=gnu++23",
+@@ -1639,7 +1644,7 @@
+ 
+ cc_library(
+     name = "libstdcxx_cxx26",
+-    srcs = [":libstdcxx_cxx26_sources"],
++    srcs = (_GCC_14_CXX26_SOURCES if gcc_version_at_least_for(GCC_VERSION, "14.0.0") else []) + (_GCC_16_CXX26_SOURCES if gcc_version_at_least_for(GCC_VERSION, "16.0.0") else []),
+     hdrs = LIBSTDCXX_LIBRARY_HDRS,
+     copts = LIBSTDCXX_LIBRARY_COPTS + [
+         "-std=gnu++26",
