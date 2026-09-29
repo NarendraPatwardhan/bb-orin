@@ -78,6 +78,18 @@ crate.spec(
     package = "llama-cpp-2",
     version = "0.1.157",
 )
+# Root aliases exist only for direct specs. The binary names
+# LLAMA_FLASH_ATTN_TYPE_ENABLED from this crate.
+crate.spec(
+    default_features = False,
+    features = [
+        "cuda",
+        "cuda-no-vmm",
+        "common",
+    ],
+    package = "llama-cpp-sys-2",
+    version = "0.1.157",
+)
 # __cli exposes builder_from_flags. Default features include the runtime
 # that dlopens libclang. 0.72.1 is the release that follows a struct's
 # definition under libclang 22.
