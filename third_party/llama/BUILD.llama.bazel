@@ -279,7 +279,7 @@ cc_library(
         "llama.cpp/include",
         "llama.cpp/vendor",
     ],
-    # libstdc++ is linked from the Rust runtime flags, after these archives.
+    # The C++ runtime is the shared libstdc++ file on the Rust link line.
     linkopts = [
         "-ldl",
         "-lpthread",

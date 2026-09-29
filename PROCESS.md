@@ -133,7 +133,7 @@ nvcc parses the host standard library itself. The hermetic libc++ headers are no
 
 nvcc splits `-D` values on commas. `GGML_CUDA_FA_QUANTS` is a semicolon-separated string so `f16` does not become a macro. The per-type `GGML_CUDA_FA_*` macros still select the four vector kernels.
 
-Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ runtime into every crate except dylibs, and that path is the genrule that exits 1. The override in `third_party/rules_rust_dynamic_cxx.patch` links the shared runtime for target builds as `-Clink-arg` after the native archives. rustc places `-ldylib` earlier, under `--as-needed`, and that drops libstdc++ before the CUDA archives are extracted. Exec tools such as `process_wrapper` stay on static libc++, because the host's dynamic libc++ does not pull libunwind and the link fails on `_Unwind_Resume`.
+Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ runtime into every crate except dylibs, and that path is the genrule that exits 1. The toolchain search directory contains an empty `libstdc++.a` and an empty `libunwind.a`, so `-lstdc++` and `-lunwind` satisfy the link without defining anything. The override in `third_party/rules_rust_dynamic_cxx.patch` passes the real shared objects by path, after the native archives, for target builds. Exec tools such as `process_wrapper` stay on static libc++, because the host's dynamic libc++ does not pull libunwind and the link fails on `_Unwind_Resume`.
 
 ## Modules
 
