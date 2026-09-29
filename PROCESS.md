@@ -129,7 +129,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --remote_download_minimal
 ```
 
-If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. That flag is the fix. The clang toolchain stays the one selected above.
+nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects `@llvm//constraints/cxxstdlib:libstdcxx.13.2.0`. That is the Orin's libstdc++ generation. If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. The clang toolchain stays the one selected above.
 
 ## Modules
 

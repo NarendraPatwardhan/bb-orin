@@ -8,6 +8,9 @@ platform(
         "@platforms//cpu:aarch64",
         "@platforms//os:linux",
         "@llvm//constraints/libc:gnu.2.28",
+        # nvcc's parser cannot read the hermetic libc++ headers. libstdc++ 13.2
+        # matches the Orin and is a standard library nvcc accepts.
+        "@llvm//constraints/cxxstdlib:libstdcxx.13.2.0",
     ],
 )
 
