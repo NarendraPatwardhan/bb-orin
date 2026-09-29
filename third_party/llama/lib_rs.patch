@@ -1,0 +1,11 @@
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -5,7 +5,7 @@
+ #![allow(non_snake_case)]
+ #![allow(unpredictable_function_pointer_comparisons)]
+ 
+-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
++include!(env!("LLAMA_BINDINGS_RS"));
+ 
+ #[cfg(test)]
+ mod tests {

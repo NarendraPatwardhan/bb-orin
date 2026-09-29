@@ -1,0 +1,100 @@
+module(name = "orion")
+
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.19")
+bazel_dep(name = "rules_python", version = "1.9.0")
+bazel_dep(name = "llvm", version = "0.8.9")
+bazel_dep(name = "rules_rust", version = "0.74.0")
+bazel_dep(name = "rules_rust_bindgen", version = "0.74.0")
+bazel_dep(name = "rules_cuda", version = "0.3.0")
+
+# 0.3.0 hardcodes the redist arch to x86_64. This commit selects exec-platform
+# nvcc and target-platform SBSA libraries.
+git_override(
+    module_name = "rules_cuda",
+    commit = "8dd68e7ade0c681d46eb659e662e9b4fe1e87013",
+    patches = ["//third_party:rules_cuda_cublas_static.patch"],
+    patch_strip = 1,
+    remote = "https://github.com/bazel-contrib/rules_cuda.git",
+)
+
+register_toolchains("@llvm//toolchain:all")
+register_toolchains("@rules_rust_bindgen//:default_bindgen_toolchain")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "llama_cpp_sys_src",
+    build_file = "//third_party/llama:BUILD.llama.bazel",
+    sha256 = "cdd0b39fc874267312983364d48379179a7945ad9d4c068c176304ae1cdca1ec",
+    strip_prefix = "llama-cpp-sys-2-0.1.157",
+    type = "tar.gz",
+    urls = ["https://static.crates.io/crates/llama-cpp-sys-2/llama-cpp-sys-2-0.1.157.crate"],
+)
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2024",
+    versions = ["1.98.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(
+    default_features = False,
+    features = [
+        "cuda",
+        "cuda-no-vmm",
+        "common",
+    ],
+    package = "llama-cpp-2",
+    version = "0.1.157",
+)
+crate.annotation(
+    compile_data = ["@llama_cpp_sys_src//:llama_bindings"],
+    crate = "llama-cpp-sys-2",
+    crate_features = [
+        "cuda",
+        "cuda-no-vmm",
+        "common",
+    ],
+    gen_build_script = "off",
+    label_injections = {"@llama_cpp_sys_src//:llama_bindings": "@llama_cpp_sys_src"},
+    link_deps = ["@llama_cpp_sys_src//:llama-common"],
+    patch_args = ["-p1"],
+    patches = ["//third_party/llama:lib_rs.patch"],
+    rustc_env = {"LLAMA_BINDINGS_RS": "${pwd}/$(execpath @llama_cpp_sys_src//:llama_bindings)"},
+)
+crate.from_specs(
+    name = "crates",
+    supported_platform_triples = [
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+    ],
+)
+use_repo(crate, "crates")
+
+cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
+cuda.redist_json(
+    components = [
+        "cccl",
+        "crt",
+        "cudart",
+        "culibos",
+        "cublas",
+        "nvcc",
+        "nvvm",
+        "nvjitlink",
+    ],
+    name = "cuda_redist",
+    platforms = [
+        "linux-x86_64",
+        "linux-sbsa",
+    ],
+    version = "13.2.0",
+)
+cuda.toolkit(name = "cuda")
+use_repo(cuda, "cuda")

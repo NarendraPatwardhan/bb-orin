@@ -1,0 +1,317 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cuda//cuda:defs.bzl", "cuda_library")
+load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen")
+
+package(default_visibility = ["//visibility:public"])
+
+_FA_TYPES = ["Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q8_0", "BF16", "F16"]
+_FA_ON = ["Q4_0_Q4_0", "Q8_0_Q8_0", "F16_F16", "BF16_BF16"]
+
+# cmake compiles f16-f16, q4_0-q4_0, q8_0-q8_0, and bf16-bf16, and still emits all 49 FA macros.
+_CUDA_DEFINES = [
+    "GGML_CUDA_FA_{}_{}={}".format(k, v, 1 if "{}_{}".format(k, v) in _FA_ON else 0)
+    for k in _FA_TYPES
+    for v in _FA_TYPES
+] + [
+    "GGML_CUDA_FA_QUANTS=\\\"q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16\\\"",
+    "GGML_CUDA_NO_VMM",
+    "GGML_CUDA_USE_GRAPHS",
+]
+
+expand_template(
+    name = "ggml_version_h",
+    out = "llama.cpp/ggml/src/ggml-version.h",
+    substitutions = {
+        "@GGML_BUILD_COMMIT@": "26394b4",
+        "@GGML_VERSION@": "0",
+    },
+    template = "llama.cpp/ggml/src/ggml-version.h.in",
+)
+
+expand_template(
+    name = "llama_version_h",
+    out = "llama.cpp/src/llama-version.h",
+    substitutions = {
+        "@LLAMA_BUILD_COMMIT@": "26394b4",
+        "@LLAMA_VERSION@": "0",
+    },
+    template = "llama.cpp/src/llama-version.h.in",
+)
+
+expand_template(
+    name = "build_info_cpp",
+    out = "llama.cpp/common/build-info.cpp",
+    substitutions = {
+        "@BUILD_COMPILER@": "clang",
+        "@BUILD_TARGET@": "aarch64-unknown-linux-gnu",
+        "@LLAMA_BUILD_COMMIT@": "26394b4",
+        "@LLAMA_BUILD_NUMBER@": "0",
+    },
+    template = "llama.cpp/common/build-info.cpp.in",
+)
+
+cc_library(
+    name = "nlohmann",
+    hdrs = glob(["llama.cpp/vendor/nlohmann/**"]),
+    includes = ["llama.cpp/vendor"],
+)
+
+cc_library(
+    name = "sheredom",
+    hdrs = glob(["llama.cpp/vendor/sheredom/**"]),
+    includes = ["llama.cpp/vendor"],
+)
+
+cc_library(
+    name = "cpp-httplib",
+    srcs = ["llama.cpp/vendor/cpp-httplib/httplib.cpp"],
+    hdrs = ["llama.cpp/vendor/cpp-httplib/httplib.h"],
+    copts = ["-w"],
+    includes = ["llama.cpp/vendor"],
+    linkopts = ["-lpthread"],
+    local_defines = [
+        "CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+        "CPPHTTPLIB_LISTEN_BACKLOG=512",
+        "CPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+        "CPPHTTPLIB_TCP_NODELAY=1",
+    ],
+)
+
+cc_library(
+    name = "ggml-base",
+    srcs = [
+        "llama.cpp/ggml/src/ggml-alloc.c",
+        "llama.cpp/ggml/src/ggml-backend-meta.cpp",
+        "llama.cpp/ggml/src/ggml-backend.cpp",
+        "llama.cpp/ggml/src/ggml-opt.cpp",
+        "llama.cpp/ggml/src/ggml-quants.c",
+        "llama.cpp/ggml/src/ggml-threading.cpp",
+        "llama.cpp/ggml/src/ggml.c",
+        "llama.cpp/ggml/src/ggml.cpp",
+        "llama.cpp/ggml/src/gguf.cpp",
+    ],
+    hdrs = glob([
+        "llama.cpp/ggml/include/*.h",
+        "llama.cpp/ggml/src/*.h",
+    ]) + [":ggml_version_h"],
+    includes = [
+        "llama.cpp/ggml/include",
+        "llama.cpp/ggml/src",
+    ],
+    linkopts = [
+        "-lm",
+        "-lpthread",
+    ],
+)
+
+cc_library(
+    name = "ggml-cpu",
+    srcs = [
+        "llama.cpp/ggml/src/ggml-cpu/amx/amx.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/amx/mmq.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/arch/arm/quants.c",
+        "llama.cpp/ggml/src/ggml-cpu/arch/arm/repack.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/binary-ops.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c",
+        "llama.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/hbm.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/iqp.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/ops.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/quants.c",
+        "llama.cpp/ggml/src/ggml-cpu/repack.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/traits.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/unary-ops.cpp",
+        "llama.cpp/ggml/src/ggml-cpu/vec.cpp",
+    ],
+    hdrs = glob(["llama.cpp/ggml/src/ggml-cpu/**/*.h"]),
+    copts = ["-march=armv8.2-a+dotprod+fp16"],
+    includes = [
+        "llama.cpp/ggml/include",
+        "llama.cpp/ggml/src",
+        "llama.cpp/ggml/src/ggml-cpu",
+    ],
+    local_defines = [
+        "GGML_USE_DOTPROD",
+        "GGML_USE_FP16_VECTOR_ARITHMETIC",
+    ],
+    deps = [":ggml-base"],
+)
+
+cc_library(
+    name = "cuda_static",
+    deps = [
+        "@cuda//:cublasLt_static",
+        "@cuda//:cublas_static",
+        "@cuda//:cuda_runtime_static",
+        "@cuda//:culibos_a",
+        "@cuda//:nvjitlink_static",
+    ],
+)
+
+cuda_library(
+    name = "ggml-cuda",
+    srcs = glob([
+        "llama.cpp/ggml/src/ggml-cuda/*.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-mma*.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-tile*.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/mmf*.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/mmq*.cu",
+    ]) + [
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu",
+        "llama.cpp/ggml/src/ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu",
+    ],
+    hdrs = glob([
+        "llama.cpp/ggml/src/ggml-cuda/**/*.cuh",
+        "llama.cpp/ggml/src/ggml-cuda/**/*.h",
+    ]) + ["llama.cpp/ggml/include/ggml-cuda.h"],
+    alwayslink = True,
+    copts = [
+        "--allow-unsupported-compiler",
+        "-use_fast_math",
+        "-compress-mode=size",
+        "-Xcompiler",
+        "-std=c++17",
+        "-Xcompiler",
+        "-fPIC",
+    ],
+    defines = _CUDA_DEFINES,
+    features = [
+        "nvcc_allow_unsupported_compiler",
+        "cuda_host_use_cxxopts",
+    ],
+    includes = [
+        "llama.cpp/ggml/include",
+        "llama.cpp/ggml/src",
+    ],
+    deps = [
+        ":cuda_static",
+        ":ggml-base",
+        "@cuda//:cub",
+        "@cuda//:libcudacxx",
+        "@cuda//:thrust",
+    ],
+)
+
+cc_library(
+    name = "ggml",
+    srcs = [
+        "llama.cpp/ggml/src/ggml-backend-dl.cpp",
+        "llama.cpp/ggml/src/ggml-backend-reg.cpp",
+    ],
+    defines = [
+        "GGML_USE_CPU",
+        "GGML_USE_CUDA",
+    ],
+    includes = [
+        "llama.cpp/ggml/include",
+        "llama.cpp/ggml/src",
+    ],
+    linkopts = ["-ldl"],
+    deps = [
+        ":ggml-base",
+        ":ggml-cpu",
+        ":ggml-cuda",
+    ],
+)
+
+cc_library(
+    name = "llama",
+    srcs = glob([
+        "llama.cpp/src/**/*.cpp",
+        "llama.cpp/src/**/*.h",
+    ]),
+    hdrs = ["llama.cpp/include/llama.h"] + [":llama_version_h"],
+    includes = [
+        "llama.cpp/ggml/include",
+        "llama.cpp/include",
+        "llama.cpp/src",
+    ],
+    deps = [":ggml"],
+)
+
+cc_library(
+    name = "llama-common",
+    srcs = glob(
+        ["llama.cpp/common/**/*.cpp"],
+        exclude = ["llama.cpp/common/**/*test*.cpp"],
+    ) + [
+        "wrapper_common.cpp",
+        ":build_info_cpp",
+    ],
+    hdrs = glob([
+        "llama.cpp/common/**/*.h",
+        "llama.cpp/common/**/*.hpp",
+    ]) + [
+        "wrapper.h",
+        "wrapper_common.h",
+        "wrapper_utils.h",
+    ],
+    includes = [
+        ".",
+        "llama.cpp/common",
+        "llama.cpp/ggml/include",
+        "llama.cpp/include",
+        "llama.cpp/vendor",
+    ],
+    linkopts = [
+        "-ldl",
+        "-lpthread",
+        "-lstdc++",
+    ],
+    deps = [
+        ":cpp-httplib",
+        ":llama",
+        ":nlohmann",
+        ":sheredom",
+    ],
+)
+
+cc_library(
+    name = "bindgen_headers",
+    hdrs = glob([
+        "llama.cpp/common/**/*.h",
+        "llama.cpp/common/**/*.hpp",
+        "llama.cpp/ggml/include/**/*.h",
+        "llama.cpp/ggml/src/**/*.h",
+        "llama.cpp/ggml/src/**/*.cuh",
+        "llama.cpp/include/**/*.h",
+        "llama.cpp/src/**/*.h",
+        "llama.cpp/vendor/**/*.h",
+        "llama.cpp/vendor/**/*.hpp",
+    ]) + [
+        "wrapper.h",
+        "wrapper_common.h",
+        "wrapper_utils.h",
+        ":ggml_version_h",
+        ":llama_version_h",
+    ],
+    includes = [
+        ".",
+        "llama.cpp/common",
+        "llama.cpp/ggml/include",
+        "llama.cpp/ggml/src",
+        "llama.cpp/include",
+        "llama.cpp/src",
+        "llama.cpp/vendor",
+    ],
+    deps = [":llama-common"],
+)
+
+rust_bindgen(
+    name = "llama_bindings",
+    bindgen_flags = [
+        "--allowlist-item=ggml_.*",
+        "--allowlist-item=gguf_.*",
+        "--allowlist-item=llama_.*",
+        "--allowlist-item=llama_rs_.*",
+        "--with-derive-partialeq",
+        "--no-prepend-enum-name",
+        "--raw-line=type FILE = ::std::os::raw::c_void;",
+    ],
+    cc_lib = ":bindgen_headers",
+    clang_flags = ["-DLLAMA_RS_BUILD_COMMON"],
+    header = "wrapper.h",
+)

@@ -1,0 +1,4 @@
+/bazel-*
+/bb-out/
+/MODULE.bazel.lock
+/Cargo.lock

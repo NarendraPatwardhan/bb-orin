@@ -1,0 +1,49 @@
+--- a/cuda/private/templates/BUILD.cublas
++++ b/cuda/private/templates/BUILD.cublas
+@@ -38,5 +38,36 @@ cc_library(
+     ]) + if_windows([
+         ":cublasLt_lib",
+         ":cublas_lib",
+     ]),
+ )
++
++cc_import(
++    name = "cublas_static_a",
++    static_library = "%{component_name}/%{libpath}/libcublas_static.a",
++    target_compatible_with = ["@platforms//os:linux"],
++)
++
++cc_import(
++    name = "cublasLt_static_a",
++    static_library = "%{component_name}/%{libpath}/libcublasLt_static.a",
++    target_compatible_with = ["@platforms//os:linux"],
++)
++
++cc_library(
++    name = "cublas_static",
++    deps = [
++        ":%{component_name}_headers",
++    ] + if_linux([
++        ":cublasLt_static_a",
++        ":cublas_static_a",
++    ]),
++)
++
++cc_library(
++    name = "cublasLt_static",
++    deps = [
++        ":%{component_name}_headers",
++    ] + if_linux([
++        ":cublasLt_static_a",
++    ]),
++)
+--- a/cuda/private/templates/registry.bzl
++++ b/cuda/private/templates/registry.bzl
+@@ -7,6 +7,6 @@ REGISTRY = {
+     "crt": ["crt_all_files", "crt_license", "crt_headers", "crt"],
+     "culibos": ["culibos_all_files", "culibos_license", "culibos_headers", "culibos_a"],  # culibos_a is not for end users.
+-    "cublas": ["cublas_all_files", "cublas_license", "cublas_headers", "cublas"],
++    "cublas": ["cublas_all_files", "cublas_license", "cublas_headers", "cublas", "cublas_static", "cublasLt_static"],
+     "cufft": ["cufft_all_files", "cufft_license", "cufft_headers", "cufft", "cufft_static"],
+     "cufile": ["cufile", "cufile_all_files", "cufile_header_files", "cufile_headers", "cufile_license"],
+     "cupti": ["cupti_all_files", "cupti_license", "cupti_headers", "cupti", "nvperf_host", "nvperf_target"],

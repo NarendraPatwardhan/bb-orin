@@ -1,0 +1,3 @@
+exports_files([
+    "rules_cuda_cublas_static.patch",
+])

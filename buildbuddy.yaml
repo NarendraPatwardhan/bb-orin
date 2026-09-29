@@ -1,0 +1,19 @@
+# BuildBuddy runs this on a remote amd64 runner after a push.
+# The workstation does not run Bazel.
+actions:
+  - name: "orin aarch64 CUDA"
+    triggers:
+      push:
+        branches:
+          - "main"
+      pull_request:
+        branches:
+          - "*"
+    container_image: "ubuntu-22.04"
+    timeout: "3h"
+    resource_requests:
+      cpu: "16"
+      memory: "32GB"
+      disk: "80GB"
+    steps:
+      - run: "bb build --config=buildbuddy --config=release //:orin"

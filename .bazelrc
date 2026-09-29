@@ -1,0 +1,46 @@
+startup --digest_function=blake3
+
+# Target is aarch64. Execution is the x86_64 BuildBuddy pool selected below.
+# Do not pass `bb --arch=arm64`; there is no arm64 workflows pool.
+common --platforms=//:linux_arm64
+common --extra_execution_platforms=//:rbe
+common --compiler=clang
+common --force_pic
+common --host_compilation_mode=opt
+common --compilation_mode=opt
+common --copt=-w
+common --host_copt=-w
+common --cxxopt=-std=c++17
+common --host_cxxopt=-std=c++17
+common --enable_runfiles
+common --incompatible_use_cc_configure_from_rules_cc
+common --incompatible_disallow_empty_glob=false
+common --@llvm//config:experimental_stub_libgcc_s=true
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+common --experimental_repo_remote_exec
+
+# Orin Nano, compute capability 8.7. Static CUDA runtime. SBSA is the rules_cuda default for aarch64.
+common --@rules_cuda//cuda:archs=sm_87
+common --@rules_cuda//cuda:compiler=nvcc
+common --@rules_cuda//cuda:runtime=@cuda//:cuda_runtime_static
+
+common:release --compilation_mode=opt
+common:release --copt=-O3
+common:release --strip=always
+
+# `bb remote` is the Bazel client. This config sends compilation to remote executors.
+common:buildbuddy --bes_results_url=https://app.buildbuddy.io/invocation/
+common:buildbuddy --bes_backend=grpcs://remote.buildbuddy.io
+common:buildbuddy --remote_cache=grpcs://remote.buildbuddy.io
+common:buildbuddy --experimental_remote_downloader=grpcs://remote.buildbuddy.io
+common:buildbuddy --remote_executor=grpcs://remote.buildbuddy.io
+common:buildbuddy --remote_timeout=3600
+common:buildbuddy --remote_cache_compression
+common:buildbuddy --rewind_lost_inputs
+common:buildbuddy --experimental_remote_downloader_local_fallback
+common:buildbuddy --grpc_keepalive_time=30s
+common:buildbuddy --jobs=80
+common:buildbuddy --extra_execution_platforms=//:rbe
+common:buildbuddy --experimental_repo_remote_exec=true
+common:buildbuddy --remote_upload_local_results
+common:buildbuddy --remote_download_minimal
