@@ -1,62 +1,43 @@
 diff --git a/rust/private/rustc.bzl b/rust/private/rustc.bzl
 --- a/rust/private/rustc.bzl
 +++ b/rust/private/rustc.bzl
-@@ -784,12 +784,9 @@
+@@ -784,9 +784,9 @@
  
      if not cc_toolchain:
          runtime_libs = depset()
 -    elif crate_info.type in ["dylib", "cdylib"]:
 -        # For shared libraries we want to link C++ runtime library dynamically
 -        # (for example libstdc++.so or libc++.so).
--        runtime_libs = cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration)
++    elif crate_info.type in ["dylib", "cdylib"] or not is_exec_configuration(ctx):
++        # dylibs, and target builds, link the shared C++ runtime.
++        # hermetic libstdc++ has no static archive. Exec tools keep static libc++.
+         runtime_libs = cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration)
      else:
--        runtime_libs = cc_toolchain.static_runtime_lib(feature_configuration = feature_configuration)
-+        # hermetic-llvm ships libstdc++ only as a shared library.
-+        runtime_libs = cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration)
+         runtime_libs = cc_toolchain.static_runtime_lib(feature_configuration = feature_configuration)
+@@ -1387,6 +1387,7 @@
+             compilation_mode,
+             ld_is_direct_driver,
+             include_link_flags = include_link_flags,
++            dynamic_cxx_runtime = not is_exec_configuration(ctx),
+         )
  
-     nolinkstamp_compile_inputs = depset(
-         nolinkstamp_compile_direct_inputs +
-@@ -3053,34 +3050,18 @@
+         # On macOS, set the dylib install name to @rpath/<basename> so that
+@@ -3000,7 +3001,8 @@
+         feature_configuration,
+         compilation_mode,
+         use_direct_link_driver,
+-        include_link_flags = True):
++        include_link_flags = True,
++        dynamic_cxx_runtime = False):
+     """Adds linker flags for all dependencies of the current target.
+ 
+     Args:
+@@ -3053,7 +3055,7 @@
      args.add_all(linkstamp_outs, format_each = "-Clink-args=%s")
  
      if cc_toolchain:
 -        if crate_type in ["dylib", "cdylib"]:
--            # For shared libraries we want to link C++ runtime library dynamically
--            # (for example libstdc++.so or libc++.so).
-+        # hermetic-llvm ships libstdc++ only as a shared library.
-+        args.add_all(
-+            cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration),
-+            map_each = _get_dirname,
-+            format_each = "-Lnative=%s",
-+        )
-+        if include_link_flags:
++        if crate_type in ["dylib", "cdylib"] or dynamic_cxx_runtime:
+             # For shared libraries we want to link C++ runtime library dynamically
+             # (for example libstdc++.so or libc++.so).
              args.add_all(
-                 cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration),
--                map_each = _get_dirname,
--                format_each = "-Lnative=%s",
-+                map_each = get_lib_name,
-+                format_each = "-ldylib=%s",
-             )
--            if include_link_flags:
--                args.add_all(
--                    cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration),
--                    map_each = get_lib_name,
--                    format_each = "-ldylib=%s",
--                )
--        else:
--            # For all other crate types we want to link C++ runtime library statically
--            # (for example libstdc++.a or libc++.a).
--            args.add_all(
--                cc_toolchain.static_runtime_lib(feature_configuration = feature_configuration),
--                map_each = _get_dirname,
--                format_each = "-Lnative=%s",
--            )
--            if include_link_flags:
--                args.add_all(
--                    cc_toolchain.static_runtime_lib(feature_configuration = feature_configuration),
--                    map_each = get_lib_name,
--                    format_each = "-lstatic=%s",
--                )
- 
- def _get_out_dir_path(file):
-     """Return the path suitable for `--out-dir=<value>`.

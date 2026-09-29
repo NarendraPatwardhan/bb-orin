@@ -131,6 +131,8 @@ common:buildbuddy --remote_download_minimal
 
 nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects `@llvm//constraints/cxxstdlib:libstdcxx.17.0.0`. The 13.2 port in this toolchain has an empty c++23 source list and does not analyze. If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. The clang toolchain stays the one selected above.
 
+Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ runtime into every crate except dylibs, and that path is the genrule that exits 1. The override in `third_party/rules_rust_dynamic_cxx.patch` links the shared runtime for target builds. Exec tools such as `process_wrapper` stay on static libc++, because the host's dynamic libc++ does not pull libunwind and the link fails on `_Unwind_Resume`.
+
 ## Modules
 
 - `rules_rust`, with rustc 1.98 and both `aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-gnu` in `crate.from_cargo`'s `supported_platform_triples`. The x86_64 rustc emits aarch64 objects and links them with the aarch64 clang.
