@@ -78,6 +78,14 @@ crate.spec(
     package = "llama-cpp-2",
     version = "0.1.157",
 )
+# __cli exposes builder_from_flags. Default features include the runtime
+# that dlopens libclang. 0.72.1 is the release that follows a struct's
+# definition under libclang 22.
+crate.spec(
+    features = ["__cli"],
+    package = "bindgen",
+    version = "0.72.1",
+)
 crate.annotation(
     compile_data = ["@llama_cpp_sys_src//:llama_bindings"],
     crate = "llama-cpp-sys-2",

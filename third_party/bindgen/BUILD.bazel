@@ -1,8 +1,19 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_toolchain")
+
+# rules_rust 0.74's bindgen is 0.71.1. With libclang 22 that version follows
+# the forward declaration and emits a 1-byte struct while the layout test
+# still uses the complete type's size. 0.72.1 walks the definition.
+rust_binary(
+    name = "bindgen",
+    srcs = ["main.rs"],
+    edition = "2021",
+    deps = ["@crates//:bindgen"],
+)
 
 rust_bindgen_toolchain(
     name = "bindgen_toolchain_impl",
-    bindgen = "@rules_rust_bindgen//3rdparty:bindgen",
+    bindgen = ":bindgen",
     # Hermetic clang (the registered cc toolchain) supplies -resource-dir.
     # libclang itself is the prebuilt in @llvm_prebuilt, not a source build.
     libclang = "@llvm_prebuilt//:libclang",

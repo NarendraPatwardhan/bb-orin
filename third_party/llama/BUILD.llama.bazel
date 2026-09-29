@@ -331,6 +331,9 @@ rust_bindgen(
         "--allowlist-item=gguf_.*",
         "--allowlist-item=llama_.*",
         "--allowlist-item=llama_rs_.*",
+        # Upstream build.rs sets allowlist_recursively(false). The CLI form
+        # is this flag. The raw FILE line then owns that name.
+        "--no-recursive-allowlist",
         "--with-derive-partialeq",
         "--no-prepend-enum-name",
         "--raw-line=type FILE = ::std::os::raw::c_void;",

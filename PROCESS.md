@@ -138,7 +138,7 @@ Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ run
 ## Modules
 
 - `rules_rust`, with rustc 1.98 and both `aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-gnu` in `crate.from_cargo`'s `supported_platform_triples`. The x86_64 rustc emits aarch64 objects and links them with the aarch64 clang.
-- `rules_rust_bindgen`, for the FFI action. The registered toolchain is `//third_party/bindgen:bindgen_toolchain`. It dlopens a prebuilt libclang 22 (`third_party/llvm_prebuilt.bzl`). The module's default toolchain builds `@llvm-project` from source, and that path calls `python3`, which the ubuntu:22.04 executor image does not have. Hermetic `@llvm` stays the C++ compiler; its prebuilt ships `clang` and not `libclang.so`.
+- `rules_rust_bindgen`, for the FFI action. The registered toolchain is `//third_party/bindgen:bindgen_toolchain`. It dlopens a prebuilt libclang 22 (`third_party/llvm_prebuilt.bzl`). The module's default toolchain builds `@llvm-project` from source, and that path calls `python3`, which the ubuntu:22.04 executor image does not have. Hermetic `@llvm` stays the C++ compiler; its prebuilt ships `clang` and not `libclang.so`. The bindgen binary is 0.72.1 (`//third_party/bindgen:bindgen`), not the 0.71.1 binary shipped with rules_rust 0.74. libclang 22 reports the forward declaration of a struct; 0.71.1 then emits a 1-byte placeholder while the layout test still expects the complete size. 0.72.1 follows the definition.
 - `rules_cc`.
 - `llvm`, hermetic clang, the same cross toolchain that already targets aarch64 at the glibc 2.28 floor. Registered with `@llvm//toolchain:all`.
 - `rules_cuda`. `cuda.redist_json` for CUDA 13.2, platforms `linux-x86_64` and `linux-sbsa`. `@rules_cuda//cuda:aarch64` stays `sbsa`.
@@ -185,7 +185,7 @@ On `llama-cpp-sys-2`:
 
 `rules_cuda` is git commit `8dd68e7ade0c681d46eb659e662e9b4fe1e87013`. BCR 0.3.0 cannot fetch `linux-sbsa`. A patch adds `cublas_static` and `cublasLt_static`. CUDA is 13.2.0, components `cccl`, `crt`, `cudart`, `culibos`, `cublas`, `nvcc`, `nvvm`, and `nvjitlink`.
 
-`rust_bindgen` compiles `wrapper.h` with the sys crate's allowlist (`ggml_*`, `gguf_*`, `llama_*`, and `llama_rs_*` when `common` is on). A patch to the sys crate includes that generated file instead of the `OUT_DIR` path `build.rs` used to write.
+`rust_bindgen` compiles `wrapper.h` with the sys crate's allowlist (`ggml_*`, `gguf_*`, `llama_*`, and `llama_rs_*` when `common` is on) and `--no-recursive-allowlist`. The raw line `type FILE = ::std::os::raw::c_void` is the only definition of `FILE`. A patch to the sys crate includes that generated file instead of the `OUT_DIR` path `build.rs` used to write.
 
 `llama-cpp-2` depends on that sys crate. The application is a `rust_binary` on top of `llama-cpp-2`.
 
