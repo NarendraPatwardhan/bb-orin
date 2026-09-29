@@ -41,3 +41,22 @@ diff --git a/rust/private/rustc.bzl b/rust/private/rustc.bzl
              # For shared libraries we want to link C++ runtime library dynamically
              # (for example libstdc++.so or libc++.so).
              args.add_all(
+@@ -3064,7 +3066,13 @@
+             if include_link_flags:
+-                args.add_all(
+-                    cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration),
+-                    map_each = get_lib_name,
+-                    format_each = "-ldylib=%s",
+-                )
++                # -ldylib is emitted before the rlibs and under --as-needed,
++                # so libstdc++ is dropped before the CUDA archives. -Clink-arg
++                # is appended after those archives.
++                args.add("-Clink-arg=-Wl,-Bdynamic")
++                args.add("-Clink-arg=-Wl,--no-as-needed")
++                args.add_all(
++                    cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration),
++                    map_each = get_lib_name,
++                    format_each = "-Clink-arg=-l%s",
++                )
++                args.add("-Clink-arg=-Wl,--as-needed")
+         else:

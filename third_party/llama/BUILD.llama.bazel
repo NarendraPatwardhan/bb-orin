@@ -279,10 +279,10 @@ cc_library(
         "llama.cpp/include",
         "llama.cpp/vendor",
     ],
+    # libstdc++ is linked from the Rust runtime flags, after these archives.
     linkopts = [
         "-ldl",
         "-lpthread",
-        "-lstdc++",
     ],
     local_defines = _GNU_DEFINES,
     deps = [
