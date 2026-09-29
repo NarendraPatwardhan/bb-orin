@@ -129,7 +129,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --remote_download_minimal
 ```
 
-nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects `@llvm//constraints/cxxstdlib:libstdcxx.13.2.0`. That is the Orin's libstdc++ generation. If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. The clang toolchain stays the one selected above.
+nvcc parses the host standard library itself. The hermetic libc++ headers are not a dialect it accepts, so the target platform selects `@llvm//constraints/cxxstdlib:libstdcxx.17.0.0`. The 13.2 port in this toolchain has an empty c++23 source list and does not analyze. If nvcc rejects the hermetic clang as too new, enable the `nvcc_allow_unsupported_compiler` feature. The clang toolchain stays the one selected above.
 
 ## Modules
 
