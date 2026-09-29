@@ -32,5 +32,33 @@ rust_binary(
     name = "orin",
     srcs = ["src/main.rs"],
     edition = "2024",
+    # DT_RPATH applies to libstdc++.so.6's own dependency on libunwind.so.1.
+    # DT_RUNPATH would not. The board has no LLVM libunwind.so.1.
+    rustc_flags = [
+        "-Clink-arg=-Wl,--disable-new-dtags",
+        "-Clink-arg=-Wl,-rpath,$$ORIGIN",
+    ],
     deps = ["@crates//:llama-cpp-2"],
+)
+
+# remote_download_minimal returns only this tar, so the two shared objects
+# have to be outputs of the requested target, not runfiles of //:orin.
+genrule(
+    name = "orin_bundle",
+    srcs = [
+        ":orin",
+        "@llvm//runtimes/libunwind:libunwind.shared",
+        "@llvm//runtimes/libstdcxx:libstdcxx.shared",
+    ],
+    outs = ["orin-bundle.tar"],
+    cmd = """\
+set -eu
+tmp=$$(mktemp -d ./orin-bundle.XXXXXX)
+cp -L $(location :orin) $$tmp/orin
+chmod 0755 $$tmp/orin
+cp -L $(location @llvm//runtimes/libunwind:libunwind.shared) $$tmp/libunwind.so.1
+cp -L $(location @llvm//runtimes/libstdcxx:libstdcxx.shared) "$$tmp/libstdc++.so.6"
+tar -C $$tmp -cf $@ orin libunwind.so.1 "libstdc++.so.6"
+rm -rf $$tmp
+""",
 )

@@ -16,4 +16,4 @@ actions:
       memory: "32GB"
       disk: "80GB"
     steps:
-      - run: "bb build --config=buildbuddy --config=release //:orin"
+      - run: "bb build --config=buildbuddy --config=release //:orin //:orin_bundle"

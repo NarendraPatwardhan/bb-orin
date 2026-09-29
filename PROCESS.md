@@ -71,15 +71,7 @@ bb remote \
 
 `--arch=arm64` fails: there is no Linux arm64 pool in the workflows executor set. Leave `--arch` unset. The runner is amd64. The binary is aarch64 because `--platforms` says so.
 
-`--remote_download_minimal` returns the top-level ELF to the client and leaves the runfiles on the runner. The runner packs both, following symlinks:
-
-```bash
-bazel build --config=buildbuddy --config=release --remote_download_toplevel //:<binary>
-tar -C bazel-bin -czhf "$BUILDBUDDY_ARTIFACTS_DIRECTORY/<binary>.tar.gz" \
-  <binary> <binary>.runfiles
-```
-
-Download the bytestream blob from the runner invocation, `rsync` it to `orin-1@orin-1.local`, unpack it so the executable and the runfiles directory are siblings, and run it there. Static cuBLAS means the Orin does not receive a CUDA toolkit. The dynamic linker on the board resolves `libcuda.so.1`.
+`--remote_download_minimal` returns only the outputs of the targets named on the command line. `//:orin_bundle` is that output: a tar with `orin`, `libunwind.so.1`, and `libstdc++.so.6` in one directory. Download that tar, `rsync` it to `orin-1@orin-1.local`, unpack it, and run `orin` from that directory. Static cuBLAS means the Orin does not receive a CUDA toolkit. The dynamic linker on the board resolves `libcuda.so.1`.
 
 ## Platforms
 
@@ -134,6 +126,8 @@ nvcc parses the host standard library itself. The hermetic libc++ headers are no
 nvcc splits `-D` values on commas. `GGML_CUDA_FA_QUANTS` is a semicolon-separated string so `f16` does not become a macro. The per-type `GGML_CUDA_FA_*` macros still select the four vector kernels.
 
 Hermetic libstdc++ is dynamic-only. `rules_rust` normally links a static C++ runtime into every crate except dylibs, and that path is the genrule that exits 1. The toolchain search directory contains an empty `libstdc++.a` and an empty `libunwind.a`, so `-lstdc++` and `-lunwind` satisfy the link without defining anything. The override in `third_party/rules_rust_dynamic_cxx.patch` passes the real shared objects by path, after the native archives, for target builds. Exec tools such as `process_wrapper` stay on static libc++, because the host's dynamic libc++ does not pull libunwind and the link fails on `_Unwind_Resume`.
+
+The linked ELF needs `libstdc++.so.6` and LLVM `libunwind.so.1`. The board's `libstdc++.so.6` provides `GLIBCXX_3.4.33` and `CXXABI_1.3.15`. Its unwind library is nongnu `libunwind.so.8`, a different SONAME, so it does not satisfy the binary. `//:orin` records `DT_RPATH` `$ORIGIN` (`--disable-new-dtags`, because `DT_RUNPATH` does not cover `libstdc++.so.6`'s own dependency on `libunwind.so.1`). `//:orin_bundle` puts the hermetic `libstdc++.so.6` and `libunwind.so.1` in that directory.
 
 ## Modules
 
