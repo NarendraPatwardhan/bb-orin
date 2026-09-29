@@ -144,6 +144,10 @@ fn generate(
         ));
     }
 
+    // ggmlrs captures the one-token graph at process start. Doing it here
+    // keeps this run on the replay path that process already uses.
+    warmup(model, ctx)?;
+
     ctx.clear_kv_cache();
     let mut batch = LlamaBatch::new(ctx.n_batch() as usize, 1);
     let prefill_started = Instant::now();
@@ -207,11 +211,75 @@ fn generate(
     }
     let decode_secs = decode_started.elapsed().as_secs_f64().max(1e-9);
     let decode_tps = n_decoded as f64 / decode_secs;
+    // sample() synchronizes, so the last queued eval is included in llama's counters.
+    let _ = sampler.sample(ctx, -1);
+    let perf = ctx.timings();
+    let gpu_prefill_tps = tokens_per_second(perf.n_p_eval(), perf.t_p_eval_ms());
+    let gpu_decode_tps = tokens_per_second(perf.n_eval(), perf.t_eval_ms());
     writeln!(out).map_err(|err| format!("write: {err}"))?;
     writeln!(
         out,
-        "prefill_tps={prefill_tps} decode_tps={decode_tps} decoded={n_decoded}"
+        "prefill_tps={prefill_tps} decode_tps={decode_tps} decoded={n_decoded} prompt_tokens={} gpu_prefill_tps={gpu_prefill_tps} gpu_decode_tps={gpu_decode_tps}",
+        tokens.len(),
     )
     .map_err(|err| format!("write: {err}"))?;
+    Ok(())
+}
+
+fn tokens_per_second(n: i32, elapsed_ms: f64) -> f64 {
+    if n <= 0 || elapsed_ms <= 0.0 {
+        0.0
+    } else {
+        f64::from(n) * 1000.0 / elapsed_ms
+    }
+}
+
+/// Prefill "Hi" and decode two tokens. The second one-token evaluation captures
+/// the CUDA graph; the first only runs it eagerly.
+fn warmup(model: &LlamaModel, ctx: &mut LlamaContext<'_>) -> Result<(), String> {
+    let tokens = model
+        .str_to_token("Hi", AddBos::Always)
+        .map_err(|err| format!("warmup tokenize: {err}"))?;
+    if tokens.is_empty() {
+        return Ok(());
+    }
+    ctx.clear_kv_cache();
+    let mut batch = LlamaBatch::new(ctx.n_batch() as usize, 1);
+    let mut cursor = 0;
+    while cursor < tokens.len() {
+        let end = (cursor + ctx.n_batch() as usize).min(tokens.len());
+        batch.clear();
+        for (offset, token) in tokens[cursor..end].iter().enumerate() {
+            let pos = i32::try_from(cursor + offset).map_err(|_| "position overflow".to_string())?;
+            let logits = cursor + offset + 1 == tokens.len();
+            batch
+                .add(*token, pos, &[0], logits)
+                .map_err(|err| format!("warmup prefill: {err}"))?;
+        }
+        ctx.decode(&mut batch)
+            .map_err(|err| format!("warmup prefill: {err}"))?;
+        cursor = end;
+    }
+    let mut sampler = LlamaSampler::greedy();
+    let mut n = 0u32;
+    while n < 2 {
+        let token = sampler.sample(ctx, -1);
+        sampler.accept(token);
+        if model.is_eog_token(token) {
+            break;
+        }
+        let pos = i32::try_from(tokens.len() + n as usize)
+            .map_err(|_| "position overflow".to_string())?;
+        batch.clear();
+        batch
+            .add(token, pos, &[0], true)
+            .map_err(|err| format!("warmup decode: {err}"))?;
+        ctx.decode(&mut batch)
+            .map_err(|err| format!("warmup decode: {err}"))?;
+        n += 1;
+    }
+    let _ = sampler.sample(ctx, -1);
+    ctx.clear_kv_cache();
+    ctx.reset_timings();
     Ok(())
 }

@@ -24,7 +24,6 @@ _CUDA_DEFINES = [
     # nvcc splits -D values on commas, which turned f16 into a macro.
     # The string is only reported as a feature; the FA_* macros select kernels.
     "GGML_CUDA_FA_QUANTS=\\\"q4_0-q4_0;q8_0-q8_0;f16-f16;bf16-bf16\\\"",
-    "GGML_CUDA_NO_VMM",
     "GGML_CUDA_USE_GRAPHS",
 ] + _GNU_DEFINES
 
@@ -200,9 +199,13 @@ cuda_library(
         "llama.cpp/ggml/include",
         "llama.cpp/ggml/src",
     ],
+    # VMM calls the driver API. @cuda//:cuda is the toolkit stub with
+    # system_provided set, so the bundle does not ship a libcuda. DT_NEEDED
+    # libcuda.so.1 resolves to the board driver, which supports VMM.
     deps = [
         ":cuda_static",
         ":ggml-base",
+        "@cuda//:cuda",
         "@cuda//:cub",
         "@cuda//:libcudacxx",
         "@cuda//:thrust",

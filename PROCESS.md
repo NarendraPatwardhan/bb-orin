@@ -155,7 +155,7 @@ Sources are the `llama.cpp` tree vendored inside `llama-cpp-sys-2`. An additive 
 
 `ggml-cpu` is a dependency of this CUDA target. ggml's scheduler and the ops that have no CUDA kernel live there. It is part of the CUDA binary.
 
-`ggml-cuda` defines `GGML_USE_CUDA`, `GGML_CUDA_NO_VMM`, and `GGML_CUDA_USE_GRAPHS`. `GGML_CUDA_NO_VMM` is the Orin setting: unified memory, and the link line does not contain `libcuda`. OpenMP is absent. NCCL is absent.
+`ggml-cuda` defines `GGML_USE_CUDA` and `GGML_CUDA_USE_GRAPHS`. VMM is compiled in. The link uses `@cuda//:cuda`, the toolkit stub marked system-provided, so the bundle does not contain a `libcuda`. `DT_NEEDED` is `libcuda.so.1`, resolved from the board driver. OpenMP is absent. NCCL is absent.
 
 The FlashAttention files under `ggml-cuda/template-instances/` are already in the tree. The `cuda_library` lists the same instances llama.cpp's CUDA build compiles, and it sets the matching `GGML_CUDA_FA_*` defines, because `fattn.cu` references those symbols. The Python generator that wrote those files is not a build action.
 
@@ -174,7 +174,7 @@ Each `.cu` is its own Bazel action. BuildBuddy caches them and runs them in para
 On `llama-cpp-sys-2`:
 
 - `gen_build_script = "off"`. The crate's `build.rs` is not a Bazel action.
-- `crate_features = ["cuda", "cuda-no-vmm", "common"]`. `llama-cpp-2` gates Rust code on these features. The features do not drive a native build.
+- `crate_features = ["cuda", "common"]`. The features do not drive a native build. The sys crate's `build.rs` is not a Bazel action.
 - `link_deps` is `llama-common`, which links `llama`, `ggml`, `ggml-cuda`, and the SBSA static CUDA libraries.
 
 `rules_cuda` is git commit `8dd68e7ade0c681d46eb659e662e9b4fe1e87013`. BCR 0.3.0 cannot fetch `linux-sbsa`. A patch adds `cublas_static` and `cublasLt_static`. CUDA is 13.2.0, components `cccl`, `crt`, `cudart`, `culibos`, `cublas`, `nvcc`, `nvvm`, and `nvjitlink`.
