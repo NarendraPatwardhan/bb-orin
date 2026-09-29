@@ -94,7 +94,10 @@ cc_library(
     hdrs = glob([
         "llama.cpp/ggml/include/*.h",
         "llama.cpp/ggml/src/*.h",
-    ]) + [":ggml_version_h"],
+    ]) + [
+        "llama.cpp/ggml/src/ggml-cpu/ggml-cpu-impl.h",
+        ":ggml_version_h",
+    ],
     includes = [
         "llama.cpp/ggml/include",
         "llama.cpp/ggml/src",
